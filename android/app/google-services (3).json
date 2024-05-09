@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "902402963974",
+    "project_id": "dentiste-9563c",
+    "storage_bucket": "dentiste-9563c.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:902402963974:android:3b023a94050ea3756a2187",
+        "android_client_info": {
+          "package_name": "com.example.dentiste"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAFhirbxr9LHX8-EfEsVvQJ-hZPA1EOuuc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
