@@ -1,8 +1,13 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:dentiste/model/patient_model.dart';
 import 'package:flutter/material.dart';
-import 'package:dentiste/patient/rendez_vous_page.dart';
 import 'package:dentiste/patient/notification_page.dart';
 import 'package:dentiste/patient/profilpatient_page.dart';
 import 'package:dentiste/patient/dossier_medical_page.dart';
+
+import '../model/dentiste_model.dart';
+import '../model/rendez_vous_model.dart';
+import 'rendez_vous_page.dart';
 
 class AcceuilPatientPage extends StatefulWidget {
   @override
@@ -10,48 +15,38 @@ class AcceuilPatientPage extends StatefulWidget {
 }
 
 class _AcceuilPatientPageState extends State<AcceuilPatientPage> {
-  final List<Dentist> _dentists = [
-    Dentist(
-        nom: 'Dr. Mohamed',
-        prenom: 'Ahmed',
-        specialite: 'General Dentistry',
-        image: 'assets/profildrh.png'),
-    Dentist(
-        nom: 'Dr. Fatima',
-        prenom: 'Ali',
-        specialite: 'Orthodontics',
-        image: 'assets/profildrf.png'),
-    Dentist(
-        nom: 'Dr. Hassan',
-        prenom: 'Hussein',
-        specialite: 'Prosthodontics',
-        image: 'assets/profildrh.png'),
-    Dentist(
-        nom: 'Dr. Mohamed',
-        prenom: 'Ahmed',
-        specialite: 'General Dentistry',
-        image: 'assets/profildrh.png'),
-    Dentist(
-        nom: 'Dr. Fatima',
-        prenom: 'Ali',
-        specialite: 'Orthodontics',
-        image: 'assets/profildrf.png'),
-    Dentist(
-        nom: 'Dr. Hassan',
-        prenom: 'Hussein',
-        specialite: 'Prosthodontics',
-        image: 'assets/profildrh.png'),
-  ];
-
-  List<Dentist> _filteredDentists = [];
-
-  TextEditingController _searchController = TextEditingController();
+  List<Dentiste> _dentists = [];
+  List<Dentiste> _filteredDentists = [];
+  bool loading = true;
+  Future<void> getDensitesList() async {
+    loading = true;
+    _dentists = <Dentiste>[];
+    final CollectionReference _reference =
+        await FirebaseFirestore.instance.collection("Dentistes");
+    try {
+      QuerySnapshot querySnapshot = await _reference.get();
+      querySnapshot.docs.forEach((doc) {
+        if (doc.exists) {
+          final data = doc.data() as Map<String, dynamic>;
+          _dentists.add(Dentiste.fromJson(data));
+        }
+      });
+    } catch (e) {
+      print("Error fetching Dentistes: $e");
+    }
+    _filteredDentists.addAll(_dentists);
+    print(_filteredDentists.length);
+    loading = false;
+    setState(() {});
+  }
 
   @override
   void initState() {
     super.initState();
-    _filteredDentists.addAll(_dentists);
+    getDensitesList();
   }
+
+  TextEditingController _searchController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
@@ -150,28 +145,32 @@ class _AcceuilPatientPageState extends State<AcceuilPatientPage> {
                     ),
                   ),
                   SizedBox(height: 20),
-                  ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: _filteredDentists.length,
-                    itemBuilder: (context, index) {
-                      return ListTile(
-                        leading: CircleAvatar(
-                          backgroundImage:
-                              AssetImage(_filteredDentists[index].image),
+                  loading
+                      ? CircularProgressIndicator()
+                      : ListView.builder(
+                        physics:BouncingScrollPhysics(),
+                          shrinkWrap: true,
+                          itemCount: _filteredDentists.length,
+                          itemBuilder: (context, index) {
+                            return ListTile(
+                              leading: CircleAvatar(
+                                backgroundImage:
+                                    AssetImage(_filteredDentists[index].image??'assets/profil.png'),
+                              ),
+                              title: Text(
+                                  '${_filteredDentists[index].nom} ${_filteredDentists[index].prenom}'),
+                              subtitle:
+                                  Text(_filteredDentists[index].specialite!),
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (context) => RendezVousPage(_filteredDentists[index].id)),
+                                );
+                              },
+                            );
+                          },
                         ),
-                        title: Text(
-                            '${_filteredDentists[index].nom} ${_filteredDentists[index].prenom}'),
-                        subtitle: Text(_filteredDentists[index].specialite),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) => RendezVousPage()),
-                          );
-                        },
-                      );
-                    },
-                  ),
                 ],
               ),
             ),
@@ -234,10 +233,10 @@ class _AcceuilPatientPageState extends State<AcceuilPatientPage> {
   void filterDentists(String query) {
     _filteredDentists.clear();
     if (query.isNotEmpty) {
-      List<Dentist> filteredList = [];
+      List<Dentiste> filteredList = [];
       _dentists.forEach((dentist) {
-        if (dentist.nom.toLowerCase().contains(query.toLowerCase()) ||
-            dentist.prenom.toLowerCase().contains(query.toLowerCase())) {
+        if (dentist.nom!.toLowerCase().contains(query.toLowerCase()) ||
+            dentist.prenom!.toLowerCase().contains(query.toLowerCase())) {
           filteredList.add(dentist);
         }
       });

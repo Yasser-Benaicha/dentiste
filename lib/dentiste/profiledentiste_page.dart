@@ -1,3 +1,4 @@
+import 'package:dentiste/connecter_page.dart';
 import 'package:dentiste/premier_page.dart';
 import 'package:flutter/material.dart';
 // Import de la AccueilPage
@@ -122,7 +123,7 @@ class ProfilePage extends StatelessWidget {
               SizedBox(height: 20),
               ElevatedButton(
                 onPressed: () {
-                  // Action à effectuer lorsque le bouton est pressé (Déconnexion)
+                  ConnecterPage.instance.setString('Token', "");// Action à effectuer lorsque le bouton est pressé (Déconnexion)
                   Navigator.pushAndRemoveUntil(
                     context,
                     MaterialPageRoute(builder: (context) => PremierPage()),

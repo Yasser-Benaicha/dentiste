@@ -1,6 +1,13 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:dentiste/model/dentiste_model.dart';
+import 'package:dentiste/model/rendez_vous_model.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:uuid/uuid.dart';
 
 class RendezVousPage extends StatefulWidget {
+ dynamic dentiste;
+ RendezVousPage(this.dentiste);
   @override
   _RendezVousPageState createState() => _RendezVousPageState();
 }
@@ -8,7 +15,9 @@ class RendezVousPage extends StatefulWidget {
 class _RendezVousPageState extends State<RendezVousPage> {
   DateTime _selectedDate = DateTime.now();
   TimeOfDay _selectedTime = TimeOfDay(hour: 8, minute: 0);
-
+  Uuid uiid = Uuid();
+  dynamic dentiste;
+  FirebaseAuth currentUser=FirebaseAuth.instance;
   List<String> _buildAppointmentTimes() {
     List<String> times = [];
     for (int i = 8; i <= 11; i++) {
@@ -40,6 +49,17 @@ class _RendezVousPageState extends State<RendezVousPage> {
     );
   }
 
+  void createRendezVous(RendezVous rendezVous) async {
+    CollectionReference _reference =
+        FirebaseFirestore.instance.collection("RendezVous");
+    await _reference.doc(rendezVous.id.toString()).set(rendezVous.toJson());
+  }
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    dentiste= widget.dentiste;
+  }
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -168,7 +188,23 @@ class _RendezVousPageState extends State<RendezVousPage> {
                     ),
                   ),
                   ElevatedButton(
-                    onPressed: _confirmAppointment,
+                    onPressed: () {
+                      _confirmAppointment();
+                      RendezVous rendezVous = RendezVous(
+                        id: uiid.v4(),
+                        date: DateTime(
+                            _selectedDate.year,
+                            _selectedDate.month,
+                            _selectedDate.day,
+                            _selectedTime.hour,
+                            _selectedTime.minute),
+                        dentistesIds: [dentiste],
+                        patientId: currentUser.currentUser!.uid,
+                        motif: 'maladie dentaire',
+                        state: 'En attente'
+                      );
+                      createRendezVous(rendezVous);
+                    },
                     child: Text(
                       'Confirmer le rendez-vous',
                       style: TextStyle(color: Colors.white),

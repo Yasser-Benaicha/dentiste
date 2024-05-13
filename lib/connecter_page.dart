@@ -1,20 +1,76 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'model/patient_model.dart';
 import 'patient/accceilpatient.dart';
 import 'dentiste/accueildentiste.dart'; // Importez votre page de destination CinquiemePage.dart
 import 'oblier_mdps.dart'; // Importez votre page de récupération de mot de passe OblierMdpsPage.dart
 
-class ConnecterPage extends StatelessWidget {
+class ConnecterPage extends StatefulWidget {
+  static late final SharedPreferences instance;
+
+  static Future<SharedPreferences> init() async =>
+      instance = await SharedPreferences.getInstance();
+
+  @override
+  State<ConnecterPage> createState() => _ConnecterPageState();
+}
+
+class _ConnecterPageState extends State<ConnecterPage> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController motDePasseController = TextEditingController();
+  FirebaseAuth _auth = FirebaseAuth.instance;
+  bool verification = false;
+  PatientModel patient = PatientModel();
 
-  // Fonction pour vérifier si le nom d'utilisateur existe dans la base de données
-  bool verifierUtilisateur(String email, String motDePasse) {
-    // Vous pouvez ajouter ici la logique de vérification réelle
-    // Par exemple, une vérification de base de données, une requête API, etc.
-    if ((email == "admin" && motDePasse == "1234")) {
-      return true;
-    } else {
-      return false;
+  connecter(BuildContext context) async {
+    try {
+      var authResult = await _auth.signInWithEmailAndPassword(
+        email: emailController.text,
+        password: motDePasseController.text,
+      );
+      // Authentication was successful
+      print('Authentication successful for user: ${authResult.user!.email}');
+      // Set verification to true since authentication was successful
+      if (authResult.user != null) {
+        setState(() {
+          verification = true;
+        });
+        patient = PatientModel();
+        final DocumentReference _reference = await FirebaseFirestore.instance
+            .collection("Patients")
+            .doc(authResult.user!.uid);
+        print("User ID " + authResult.user!.uid);
+        DocumentSnapshot<Object?> querySnapshot = await _reference.get();
+        if (querySnapshot.exists) {
+          patient = PatientModel.fromJson(
+              querySnapshot.data() as Map<String, dynamic>);
+        }
+      }
+      print(verification);
+    } on FirebaseAuthException catch (e) {
+      print('Failed with error code: ${e.code}');
+      print(e.message);
+      String errorMessage = 'An error occurred, please try again.';
+      // Customize error message based on error code
+      if (e.code == 'invalid-email') {
+        errorMessage = 'Invalid email format.';
+      }
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text("Authentication Error"),
+          content: Text(errorMessage),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('OK'),
+            ),
+          ],
+        ),
+      );
+      // Set verification to false since authentication failed
     }
   }
 
@@ -61,7 +117,7 @@ class ConnecterPage extends StatelessWidget {
             ),
             SizedBox(height: 20),
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
                 // Récupérer les valeurs des champs
                 String email = emailController.text;
                 String motDePasse = motDePasseController.text;
@@ -69,19 +125,20 @@ class ConnecterPage extends StatelessWidget {
                 // Vérifier si les champs ne sont pas vides
                 if (email.isNotEmpty && motDePasse.isNotEmpty) {
                   // Vérifier l'utilisateur dans la base de données
-                  if (verifierUtilisateur(email, motDePasse)) {
+                  await connecter(context);
+                  if (verification == true) {
                     // Naviguer vers la CinquiemePage si la vérification est réussie
+                    ConnecterPage.instance.setString('Token', motDePasse);
+                    patient != PatientModel()
+                        ? ConnecterPage.instance.setString('Role', "Patients")
+                        : ConnecterPage.instance.setString('Role', "Dentistes");
+
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                          builder: (context) => AcceuilPatientPage()),
-                    );
-                  } else if ((email == "admin" && motDePasse == "456")) {
-                    // Naviguer vers la page d'accueil du dentiste si la vérification est réussie
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => AccueildentistePage()),
+                          builder: (context) => patient != PatientModel()
+                              ? AcceuilPatientPage()
+                              : AccueildentistePage()),
                     );
                   } else {
                     // Afficher une erreur ou un message d'alerte si la vérification échoue

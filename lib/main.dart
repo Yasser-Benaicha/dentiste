@@ -1,3 +1,7 @@
+import 'package:dentiste/connecter_page.dart';
+import 'package:dentiste/dentiste/accueildentiste.dart';
+import 'package:dentiste/patient/accceilpatient.dart';
+import 'package:dentiste/patient/firebaseNotif.dart';
 import 'package:flutter/material.dart';
 import 'premier_page.dart'; // Importez la deuxième page
 import 'package:firebase_core/firebase_core.dart';
@@ -8,6 +12,8 @@ Future<void> main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  await NotificationService().initNotifications();
+  await ConnecterPage.init();
   runApp(MyApp());
 }
 
@@ -57,7 +63,7 @@ class _SplashScreenState extends State<SplashScreen>
       if (status == AnimationStatus.completed) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => PremierPage()),
+          MaterialPageRoute(builder: (context) => ConnecterPage.instance.getString('Token')==""?PremierPage():ConnecterPage.instance.getString('Role')=='Patients'?AcceuilPatientPage():AccueildentistePage()),
         );
       }
     });

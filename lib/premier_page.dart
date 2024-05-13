@@ -1,30 +1,4 @@
-import 'package:flutter/material.dart'
-    show
-        AppBar,
-        AssetImage,
-        BoxDecoration,
-        BoxFit,
-        BoxShape,
-        BuildContext,
-        Center,
-        Color,
-        Colors,
-        Column,
-        Container,
-        DecorationImage,
-        EdgeInsets,
-        ElevatedButton,
-        MainAxisAlignment,
-        MaterialPageRoute,
-        Navigator,
-        Padding,
-        Scaffold,
-        SizedBox,
-        StatelessWidget,
-        Text,
-        TextAlign,
-        TextStyle,
-        Widget;
+import 'package:flutter/material.dart';
 import 'connecter_page.dart'; // Importer la classe de la troisième page
 import 'creecompte.dart'; // Importer la classe de la quatrième page
 

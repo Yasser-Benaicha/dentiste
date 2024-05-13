@@ -1,7 +1,11 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dentiste/dentiste/dossier_page.dart';
 import 'package:dentiste/dentiste/enregistrer_traitement.dart';
 import 'package:dentiste/dentiste/profiledentiste_page.dart';
+import 'package:dentiste/model/rendez_vous_model.dart';
 import 'package:flutter/material.dart';
+
+import '../model/patient_model.dart';
 
 class AccueildentistePage extends StatefulWidget {
   AccueildentistePage();
@@ -11,38 +15,66 @@ class AccueildentistePage extends StatefulWidget {
 }
 
 class _AccueildentistePageState extends State<AccueildentistePage> {
-  final List<Patient> _Patient = [
-    Patient(
-        nom: 'MR. Mohamed',
-        prenom: 'Ahmed',
-        rendezvous: '12/05/2024 a 10h00',
-        image: 'assets/profiluh.png'),
-    Patient(
-        nom: 'MD Fatima',
-        prenom: 'Ali',
-        rendezvous: '12/05/2024 a 10h00',
-        image: 'assets/profiluf.png'),
-    Patient(
-        nom: 'MD Fatima',
-        prenom: 'Ali',
-        rendezvous: '12/05/2024 a 10h00',
-        image: 'assets/profiluh.png'),
-    Patient(
-        nom: 'MR. Mohamed',
-        prenom: 'Ahmed',
-        rendezvous: '12/05/2024 a 10h00',
-        image: 'assets/profiluh.png'),
-    Patient(
-        nom: 'MD Fatima',
-        prenom: 'Ali',
-        rendezvous: '12/05/2024 a 10h00',
-        image: 'assets/profiluf.png'),
-    Patient(
-        nom: 'MD Fatima',
-        prenom: 'Ali',
-        rendezvous: '12/05/2024 a 10h00',
-        image: 'assets/profiluh.png')
-  ];
+  List<RendezVous> _rendezVous = [];
+  bool loading = true;
+  List<PatientModel> _patientList = [];
+  PatientModel currentPatient = PatientModel();
+
+  Future<void> getRendezVousList() async {
+    _rendezVous = <RendezVous>[];
+    final CollectionReference _reference =
+        await FirebaseFirestore.instance.collection("RendezVous");
+    try {
+      QuerySnapshot querySnapshot = await _reference.get();
+      querySnapshot.docs.forEach((doc) {
+        if (doc.exists) {
+          final data = doc.data() as Map<String, dynamic>;
+          _rendezVous.add(RendezVous.fromJson(data));
+        }
+      });
+    } catch (e) {
+      print("Error fetching Dentistes: $e");
+    }
+    setState(() {});
+  }
+
+  Future<void> getPatientsList() async {
+    currentPatient = PatientModel();
+    final CollectionReference _reference =
+        await FirebaseFirestore.instance.collection("Patients");
+    try {
+      QuerySnapshot querySnapshot = await _reference.get();
+      querySnapshot.docs.forEach((doc) {
+        if (doc.exists) {
+          final data = doc.data() as Map<String, dynamic>;
+          _patientList.add(PatientModel.fromJson(data));
+        }
+      }
+      );
+    } catch (e) {
+      print("Error fetching patient: $e");
+    }
+        loading = false;
+
+    setState(() {});
+  }
+  void accepter(dynamic id)async{
+    final DocumentReference _reference =
+        await FirebaseFirestore.instance.collection("RendezVous").doc(id);
+    _reference.update({"state":'Accepter'});
+  }
+  void refuser(dynamic id)async{
+    final DocumentReference _reference =
+        await FirebaseFirestore.instance.collection("RendezVous").doc(id);
+    _reference.update({"state":'Refuser'});
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    getRendezVousList();
+    getPatientsList();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -106,49 +138,54 @@ class _AccueildentistePageState extends State<AccueildentistePage> {
               ],
             ),
           ),
-          Expanded(
-            child: ListView.builder(
-              itemCount: _Patient.length,
-              itemBuilder: (context, index) {
-                final dentist = _Patient[index];
-                return ListTile(
-                  leading: CircleAvatar(
-                    backgroundImage: NetworkImage(dentist.image),
-                    backgroundColor:
-                        Colors.white, // White background for avatar
-                  ),
-                  title: Text('${dentist.nom} ${dentist.prenom}',
-                      style: TextStyle(color: Colors.blue[700])),
-                  subtitle: Text(dentist.rendezvous,
-                      style: TextStyle(color: Colors.grey[600])),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      ElevatedButton(
-                        onPressed: () {
-                          // Code pour accepter le rendez-vous
-                        },
-                        child: Text('Accepter'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
+          loading
+              ? CircularProgressIndicator()
+              : Expanded(
+                  child: ListView.builder(
+                    itemCount: _rendezVous.length,
+                    itemBuilder: (context, index) {
+                      final rendezVous = _rendezVous[index];
+                      currentPatient = _patientList.firstWhere((element) => element.id==rendezVous.patientId,);
+                      return ListTile(
+                        leading: CircleAvatar(
+                          backgroundImage: AssetImage(
+                              currentPatient.image ?? 'assets/profil.png'),
+                          backgroundColor:
+                              Colors.white, // White background for avatar
                         ),
-                      ),
-                      SizedBox(width: 8),
-                      ElevatedButton(
-                        onPressed: () {
-                          // Code pour annuler le rendez-vous
-                        },
-                        child: Text('Annuler'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
+                        title: Text(
+                            '${currentPatient.nom} ${currentPatient.prenom}',
+                            style: TextStyle(color: Colors.blue[700])),
+                        subtitle: Text("${rendezVous.id}",
+                            style: TextStyle(color: Colors.grey[600])),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            ElevatedButton(
+                              onPressed: () {
+                                accepter(rendezVous.id);// Code pour accepter le rendez-vous
+                              },
+                              child: Text('Accepter'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green,
+                              ),
+                            ),
+                            SizedBox(width: 8),
+                            ElevatedButton(
+                              onPressed: () {
+                                refuser(rendezVous.id);// Code pour annuler le rendez-vous
+                              },
+                              child: Text('Refuser'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red,
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                    ],
+                      );
+                    },
                   ),
-                );
-              },
-            ),
-          ),
+                ),
         ],
       ),
       bottomNavigationBar: BottomAppBar(

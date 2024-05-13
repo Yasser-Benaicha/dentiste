@@ -1,4 +1,7 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dentiste/dentiste/accueildentiste.dart';
+import 'package:dentiste/model/dentiste_model.dart';
+import 'package:dentiste/model/patient_model.dart';
 import 'package:dentiste/patient/accceilpatient.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -28,12 +31,57 @@ class _CreerComptePageState extends State<CreerComptePage> {
   String? genreValue;
   String? roleValue;
   String? specialiteValue;
-
+  FirebaseAuth _auth = FirebaseAuth.instance;
+  
   Future<void> signUp() async {
-    await FirebaseAuth.instance.createUserWithEmailAndPassword(
+    try {
+      await FirebaseAuth.instance.createUserWithEmailAndPassword(
       email: emailController.text.trim(),
       password: motDePasseController.text.trim(),
     );
+    } on FirebaseAuthException catch (e) {
+      print('Failed with error code: ${e.code}');
+      print(e.message);
+    } 
+  }
+  void verifyEmail()async{
+    _auth.currentUser!.reload();
+  }
+  void signup() async {
+    try {
+      await _auth.createUserWithEmailAndPassword(
+          email: emailController.text.trim(),
+          password: motDePasseController.text.trim());
+    } catch (e) {
+      print(e);
+    }
+  }
+
+  saveuserinfo(value) async {
+    CollectionReference _reference =
+        FirebaseFirestore.instance.collection(roleValue!);
+    PatientModel patient = PatientModel();
+    Dentiste dentiste = Dentiste();
+    roleValue == "Patients"
+        ? patient = PatientModel(
+            id: _auth.currentUser!.uid,
+            nom: nomController.text,
+            prenom: prenomController.text,
+            email: emailController.text,
+            telephone: telephoneController.text,
+            genre: genreValue,
+          )
+        : dentiste = Dentiste(
+            id: _auth.currentUser!.uid,
+            nom: nomController.text,
+            prenom: prenomController.text,
+            specialite: specialiteValue);
+    await _reference
+        .doc(_auth.currentUser!.uid)
+        .set(roleValue == "Patients" ? patient.toJson() : dentiste.toJson())
+        .onError(
+          (error, stackTrace) => print(error),
+        );
   }
 
   @override
@@ -149,7 +197,7 @@ class _CreerComptePageState extends State<CreerComptePage> {
                 Row(
                   children: [
                     Radio<String>(
-                      value: 'Dentiste',
+                      value: 'Dentistes',
                       groupValue: roleValue,
                       onChanged: (value) {
                         setState(() {
@@ -160,7 +208,7 @@ class _CreerComptePageState extends State<CreerComptePage> {
                     Text('Dentiste'),
                     SizedBox(width: 20),
                     Radio<String>(
-                      value: 'Patient',
+                      value: 'Patients',
                       groupValue: roleValue,
                       onChanged: (value) {
                         setState(() {
@@ -174,7 +222,7 @@ class _CreerComptePageState extends State<CreerComptePage> {
               ],
             ),
             // Ajout du champ de saisie de la spécialité pour le dentiste
-            if (roleValue == 'Dentiste')
+            if (roleValue == 'Dentistes')
               DropdownButtonFormField<String>(
                 value: specialiteValue,
                 decoration: InputDecoration(
@@ -259,6 +307,8 @@ class _CreerComptePageState extends State<CreerComptePage> {
       afficherMessageErreur(
           context, 'Le numéro de téléphone doit contenir 9 chiffres.');
     } else {
+      signUp().then((value) => _auth.currentUser!.sendEmailVerification(),).then(saveuserinfo);
+      ConnecterPage.instance.setString('Token', motDePasseController.text);
       afficherDialogConfirmation(context);
     }
   }
@@ -278,19 +328,6 @@ class _CreerComptePageState extends State<CreerComptePage> {
               Text(
                 'Veuillez entrer le code de confirmation envoyé à votre numéro de téléphone :',
                 style: TextStyle(color: Colors.blue),
-              ),
-              SizedBox(height: 10),
-              TextFormField(
-                controller: codeConfirmationController,
-                keyboardType: TextInputType.number,
-                maxLength: 6,
-                decoration: InputDecoration(
-                  labelText: 'Code de confirmation (6 chiffres)',
-                  fillColor: Colors.blue,
-                  border: OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.blue),
-                  ),
-                ),
               ),
             ],
           ),
@@ -312,18 +349,17 @@ class _CreerComptePageState extends State<CreerComptePage> {
 
   void verifierCodeConfirmation(BuildContext context) {
     String codeConfirmation = codeConfirmationController.text;
-    if (codeConfirmation.length != 6 ||
-        int.tryParse(codeConfirmation) == null) {
+    verifyEmail();
+    if (!_auth.currentUser!.emailVerified) {
       afficherMessageErreur(
-          context, 'Le code de confirmation doit contenir 6 chiffres.');
+          context, 'Veuillez verifier votre email');
     } else {
       creerCompte(context);
     }
   }
 
   Future<void> creerCompte(BuildContext context) async {
-    await signUp();
-    if (roleValue == 'Dentiste') {
+    if (roleValue == 'Dentistes') {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../connecter_page.dart';
 import '../premier_page.dart'; // Import de la DeuxiemePage
 
 class ProfilpatientPage extends StatelessWidget {
@@ -108,7 +109,7 @@ class ProfilpatientPage extends StatelessWidget {
               SizedBox(height: 20),
               ElevatedButton(
                 onPressed: () {
-                  // Action à effectuer lorsque le bouton est pressé (Déconnexion)
+                  ConnecterPage.instance.setString('Token', "");// Action à effectuer lorsque le bouton est pressé (Déconnexion)
                   Navigator.pushAndRemoveUntil(
                     context,
                     MaterialPageRoute(builder: (context) => PremierPage()),
